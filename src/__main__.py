@@ -1,3 +1,6 @@
+import sys
+sys.dont_write_bytecode = True
+
 from semantickitti2bag import run_semantickitti2bag
 
 def main():
