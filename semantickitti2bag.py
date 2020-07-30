@@ -4,6 +4,7 @@ sys.dont_write_bytecode = True
 import utils #import utils.py
 
 import tf
+import tf2_ros
 import os
 import cv2
 from cv_bridge import CvBridge
@@ -11,11 +12,12 @@ import rospy
 import rosbag
 import progressbar
 from tf2_msgs.msg import TFMessage
-import datetime
+from datetime import datetime
 from std_msgs.msg import Header
 from sensor_msgs.msg import CameraInfo, Imu, PointField, NavSatFix
 import sensor_msgs.point_cloud2 as pcl2
 from geometry_msgs.msg import TransformStamped, TwistStamped, Transform
+#from nav_mags.msg import Odometry
 import numpy as np
 import argparse
 import glob
@@ -37,11 +39,16 @@ class SemanticKitti_Raw:
         self._load_timestamps()
 
     def _get_file_lists(self, scanlabel_bool):
-
         self.cam0_files = sorted(glob.glob(
-            os.path.join(self.data_path, 'image_2', '*.{}'.format(self.imtype))))
-        
+            os.path.join(self.data_path, 'image_0', '*.{}'.format(self.imtype))))
+
         self.cam1_files = sorted(glob.glob(
+            os.path.join(self.data_path, 'image_1', '*.{}'.format(self.imtype))))
+        
+        self.cam2_files = sorted(glob.glob(
+            os.path.join(self.data_path, 'image_2', '*.{}'.format(self.imtype))))       
+        
+        self.cam3_files = sorted(glob.glob(
             os.path.join(self.data_path, 'image_3', '*.{}'.format(self.imtype))))
 
         self.velo_files = sorted(glob.glob(
@@ -62,19 +69,34 @@ class SemanticKitti_Raw:
         self.timestamps = []
         with open(timestamp_file, 'r') as f:
             for line in f.readlines():
-                number = float(line[0:7])
-                sign = 1.0
+                #number = datetime.fromtimestamp(float(line))
+                number = float(line)
+                #sign = 1.0
+                
+                #if line[9]=='+':
+                #    sign = 1.0
+                #else:
+                #    sign = -1.0
 
-                if line[9]=='+':
-                    sign = 1.0
-                else:
-                    sign = -1.0
+                #num = float(line[10])*10 + float(line[11])*1
 
-                num = float(line[10])*10 + float(line[11])*1
+                #time_t = number*(10**(sign*num))
+                #print(line)
+                #print(type(line))
+                #print(number)
+                #print(type(number))
+                self.timestamps.append(number)
 
-                time_t = number*(10**(sign*num))
-                #print(time_t)
-                self.timestamps.append(time_t)
+def inv(transform):
+
+    R = transform[0:3, 0:3]
+    t = transform[0:3, 3]
+    t_inv = -1*R.T.dot(t)
+    transform_inv = np.eye(4)
+    transform_inv[0:3, 0:3] = R.T
+    transform_inv[0:3, 3] = t_inv
+
+    return transform_inv
 
 def save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic):
     print("Exporting Velodyne and Label data")
@@ -121,6 +143,190 @@ def save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic):
         pcl_msg = pcl2.create_cloud(header, fields, scan)
         bag.write(velo_topic + '/pointcloud', pcl_msg, t=pcl_msg.header.stamp)
 
+def save_velo_data(bag, kitti, velo_frame_id, velo_topic):
+    print("Exporting Velodyne data")
+    
+    velo_data_dir = os.path.join(kitti.data_path, 'velodyne')
+    velo_filenames = sorted(os.listdir(velo_data_dir))
+
+    datatimes = kitti.timestamps
+
+    iterable = zip(datatimes, velo_filenames)
+    bar = progressbar.ProgressBar()
+
+    for dt, veloname in bar(iterable):
+        if dt is None:
+            continue
+
+        velo_filename = os.path.join(velo_data_dir, veloname)
+
+        veloscan = (np.fromfile(velo_filename, dtype=np.float32)).reshape(-1, 4)
+
+        header = Header()
+        header.frame_id = velo_frame_id
+        header.stamp = rospy.Time.from_sec(float(dt))
+
+        fields =[PointField('x',  0, PointField.FLOAT32, 1),
+                 PointField('y',  4, PointField.FLOAT32, 1),
+                 PointField('z',  8, PointField.FLOAT32, 1),
+                 PointField('i', 12, PointField.FLOAT32, 1)]
+
+        pcl_msg = pcl2.create_cloud(header, fields, velo_scan)
+        bag.write(velo_topic + '/pointcloud', pcl_msg, t=pcl_msg.header.stamp)
+
+def read_calib_file(filename):
+    """ read calibration file 
+
+        returns -> dict calibration matrices as 4*4 numpy arrays
+    """
+    calib = []
+
+    calib1 = np.eye(4,4)
+    calib1[0:3, 3] = [0.27, 0.0, -0.08]
+    #print(calib1)
+    calib.append(calib1)
+
+    calib2 = np.eye(4,4)
+    calib2[0:3, 3] = [0.27, -0.51, -0.08]
+    #print(calib2)
+    calib.append(calib2)
+
+    calib3 = np.eye(4,4)
+    calib3[0:3, 3] = [0.27, 0.06, -0.08]
+    #print(calib3)
+    calib.append(calib3)
+
+    calib4 = np.eye(4,4)
+    calib4[0:3, 3] = [0.27, -0.45, -0.08]
+    #print(calib4)
+    calib.append(calib4)
+
+
+
+    #calib_file = open(filename)
+
+    #key_num = 0
+
+#    for line in calib_file:
+#        key, content = line.strip().split(":")
+#        values = [float(v) for v in content.strip().split()]
+#
+#        pose = np.zeros((4,4))
+#
+#        pose[0, 0:4] = values[0:4]
+#        pose[1, 0:4] = values[4:8]
+#        pose[2, 0:4] = values[8:12]
+#       pose[3, 3] = 1.0
+#
+#        calib.append(pose)
+#       key_num += 1
+#
+#    calib_file.close()
+    
+    #print(calib)
+    return calib
+
+def read_poses_file(filename, calibration):
+    pose_file = open(filename)
+
+    poses = []
+
+    #Tr = calibration[0]
+    #Tr_inv = inv(Tr)
+
+    for line in pose_file:
+        values = [float(v) for v in line.strip().split()]
+
+        pose = np.zeros((4, 4))
+        pose[0, 0:4] = values[0:4]
+        pose[1, 0:4] = values[4:8]
+        pose[2, 0:4] = values[8:12]
+        pose[3, 3] = 1.0
+
+        #poses.append(np.matmul(Tr_inv, np.matmul(pose, Tr)))
+        poses.append(pose)
+
+    pose_file.close()
+    return poses
+
+def get_static_transform(from_frame_id, to_frame_id, transform):
+    t = transform[0:3, 3]
+    q = tf.transformations.quaternion_from_matrix(transform) #Create quaternion from 4*4 homogenerous transformation matrix
+    
+    q_n = q / np.linalg.norm(q)
+
+    tf_msg = TransformStamped()
+    tf_msg.header.frame_id = from_frame_id #master
+    tf_msg.child_frame_id = to_frame_id
+    tf_msg.transform.translation.x = t[0]
+    tf_msg.transform.translation.y = t[1]
+    tf_msg.transform.translation.z = t[2]
+    tf_msg.transform.rotation.x = q_n[0]
+    tf_msg.transform.rotation.y = q_n[1]
+    tf_msg.transform.rotation.z = q_n[2]
+    tf_msg.transform.rotation.w = q_n[3]
+
+    return tf_msg
+
+def save_static_transforms(bag, transforms, kitti):
+    print("Get static transform")
+    tfm = TFMessage()
+    datatimes = kitti.timestamps
+
+    for transform in transforms:
+        at = get_static_transform(transform[0], transform[1], transform[2])
+        #print(at)
+        tfm.transforms.append(at)
+
+    for dt in datatimes:
+        #time = rospy.Time.from_sec(float(dt.strftime("%s.%f")))
+        time = rospy.Time.from_sec(float(dt))
+        #print(dt)
+        #print(type(time))
+        for i in range(len(tfm.transforms)):
+            tfm.transforms[i].header.stamp = time
+        bag.write('/tf_static', tfm, t=time)
+
+def save_dynamic_transforms(bag, kitti, poses, initial_time):
+    print("Exporting time dependent transformations")
+
+    datatimes = kitti.timestamps
+
+    iterable = zip(datatimes, poses)
+    bar = progressbar.ProgressBar()
+
+    for dt, pose in bar(iterable):
+        tf_dy_msg = TFMessage()
+        tf_dy_transform = TransformStamped()
+        
+        #tf_dy_transform.header.stamp = rospy.Time.from_sec(float(dt.strftime("%s.%f")))
+        tf_dy_transform.header.stamp = rospy.Time.from_sec(float(dt))
+        #print(tf_dy_transform.header.stamp)
+
+        tf_dy_transform.header.frame_id = 'map'
+        tf_dy_transform.child_frame_id = 'base_link'
+
+        t = pose[0:3, 3]
+        q = tf.transformations.quaternion_from_matrix(pose)
+
+        dy_tf = Transform()
+
+        dy_tf.translation.x = t[0]
+        dy_tf.translation.y = t[1]
+        dy_tf.translation.z = t[2]
+
+        q_n = q / np.linalg.norm(q)
+
+        dy_tf.rotation.x = q_n[0]
+        dy_tf.rotation.y = q_n[1]
+        dy_tf.rotation.z = q_n[2]
+        dy_tf.rotation.w = q_n[3]
+
+        tf_dy_transform.transform = dy_tf
+        tf_dy_msg.transforms.append(tf_dy_transform)
+
+        bag.write('/tf', tf_dy_msg, t=tf_dy_msg.transforms[0].header.stamp)
+
 def run_semantickitti2bag():
 
     parser = argparse.ArgumentParser(description='Convert SemanticKITTI dataset to rosbag file')
@@ -136,8 +342,10 @@ def run_semantickitti2bag():
     #camera
 
     cameras = [
-            (0, 'camera_left', '/semantickitti/camera_left'),
-            (1, 'camera_right', '/semantickitti/camera_right')
+            (0, 'camera_gray_left', '/semantickitti/camera_gray_left'),
+            (1, 'camera_gray_right', '/semantickitti/camera_gray_right'),
+            (2, 'camera_color_left', '/semantickitti/camera_color_left'),
+            (3, 'camera_color_right', '/semantickitti/camera_color_right')
         ]
     
     if args.dataset_path == None:
@@ -164,21 +372,40 @@ def run_semantickitti2bag():
         sys.exit(1)
     
     try:
-        velo_frame_id = 'velo_link'
-        velo_topic = '/kitti/velo'
+        velo_frame_id = 'vehicle'
+        velo_topic = '/semantickitti/velo'
+        vehicle_frame_id = 'vehicle'
+        vehicle_topic = '/semantickitti/odometry'
+        ground_truth_topic = '/semantickitti/ground_truth'
 
-        #tf_static
-        #transforms = []
+        T_base_link_to_velo = np.eye(4, 4)
 
-        #util = read_calib_file(os.path.join(kitti.data_path, 'calib.txt'))
+        calibration = read_calib_file(os.path.join(kitti.data_path, 'calib.txt'))
+        #tf-static
+        transforms = [
+            ('base_link'  , velo_frame_id, T_base_link_to_velo),
+            ('base_link', cameras[0][1], calibration[0]),
+            ('base_link', cameras[1][1], calibration[1]),
+            ('base_link', cameras[2][1], calibration[2]),
+            ('base_link', cameras[3][1], calibration[3])
+        ]
+            
+        save_static_transforms(bag, transforms, kitti)
 
-        #save_static_transform()
-        #save_dynamic_tf(bag, kitti, initial_time=None)
+        poses = read_poses_file(os.path.join(kitti.data_path,'poses.txt'), calibration)
+
+        ground_truth_file_name = "{}.txt".format(args.sequence_number)
+        ground_truth = read_poses_file(os.path.join(kitti.data_path, ground_truth_file_name), calibration)
+
+        save_dynamic_transforms(bag, kitti, poses, initial_time=None)
+        save_dynamic_transforms(bag, kitti, ground_truth, initial_time=None)
+
         if scanlabel_bool == 1:
+            print('a')
             save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic)
         elif scanlabel_bool == 0:
-            save_velo_data(bag, kitti, velo_frame_id, velo_topic)
-        #save_poses(bag, kitti, 
+            print('b')
+            save_velo_data(bag, kitti, velo_frame_id, velo_topic) 
     
     finally:
         print('Convertion is done')
