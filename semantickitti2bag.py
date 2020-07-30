@@ -327,6 +327,43 @@ def save_dynamic_transforms(bag, kitti, poses, initial_time):
 
         bag.write('/tf', tf_dy_msg, t=tf_dy_msg.transforms[0].header.stamp)
 
+def save_camera_data(bag, kitti, calibration, bridge, camera, camera_frame_id, topic, initial_time):
+    print("Exporting {} image data".format(topic))
+    datatimes = kitti.timestamps
+
+    image_file_dir = os.path.join(kitti.data_path, 'image_{}'.format(camera))
+    image_file_names = sorted(os.listdir(image_file_dir))
+
+    calib = CameraInfo()
+    calib.header.frame_id = camera_frame_id
+    P = calibration[camera]
+    #calib.P
+
+
+    iterable = zip(datatimes, image_file_names)
+    bar = progressbar.ProgressBar()
+
+    for dt, filename in bar(iterable):
+        image_filename = os.path.join(image_file_dir, filename)
+        cv_image = cv2.imread(image_filename)
+        #calib.height, calib.width = cv_image.shape[ :2]
+
+        if camera in (0, 1):
+            #image_0 and image_1 contain monocolor image, but these images are represented as RGB color
+            cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+
+        encoding = "mono8" if camera in (0, 1) else "bgr8"
+        image_message = bridge.cv2_to_imgmsg(cv_image, encoding=encoding)
+        image_message.header.frame_id = camera_frame_id
+        image_message.header.stamp = rospy.Time.from_sec(float(dt))
+        topic_ext = "/image_raw"
+
+        #calib.header.stamp = image_message.header.stamp
+
+        bag.write(topic + topic_ext, image_message, t=image_message.header.stamp)
+        #bag.write(topic + '/camera_info', calib, t=calib.header.stamp)
+
+
 def run_semantickitti2bag():
 
     parser = argparse.ArgumentParser(description='Convert SemanticKITTI dataset to rosbag file')
@@ -398,15 +435,17 @@ def run_semantickitti2bag():
         ground_truth = read_poses_file(os.path.join(kitti.data_path, ground_truth_file_name), calibration)
 
         save_dynamic_transforms(bag, kitti, poses, initial_time=None)
-        save_dynamic_transforms(bag, kitti, ground_truth, initial_time=None)
+        #save_dynamic_transforms(bag, kitti, ground_truth, initial_time=None)
 
         if scanlabel_bool == 1:
-            print('a')
             save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic)
         elif scanlabel_bool == 0:
-            print('b')
-            save_velo_data(bag, kitti, velo_frame_id, velo_topic) 
-    
+            save_velo_data(bag, kitti, velo_frame_id, velo_topic)
+
+        for camera in cameras:
+            save_camera_data(bag, kitti, calibration, bridge, camera=camera[0], camera_frame_id=camera[1], topic=camera[2], initial_time=None)
+
+
     finally:
         print('Convertion is done')
         print(bag)
