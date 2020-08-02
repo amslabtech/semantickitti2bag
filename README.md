@@ -20,7 +20,7 @@ Data must be organized in following format.
 
 SemanticKITTI dataset has voxel data, but this repository doesn't handle.
 
- * image 0~1 is monocolor, and image 2~3 is colored.
+ * image 0 and 1 is monocolor, and image 2 and 3 is colored.
  * velodyne contains the pointcloud for each scan.Each .bin is list of float32 points in [x, y, z, intensity] format.
  * .label file cantains a uint32 label for each point in the corresponding .bin scan. upper 16 bit contains instance id and lower 16 bit contains semantic label(ex.. car, bicycle, people). This program doesn't implement instance id.
  * poses.txt contain pose in world coordinate as homogenerous matrix. But this file must be loaded with calib.txt otherwise you can't get correct pose.
