@@ -28,18 +28,17 @@ SemanticKITTI dataset has voxel data, but this repository doesn't handle.
  * sequencenumber.txt(ex.. 00.txt) contains ground truth poses. 
 
 # How to install it?
-
-'''bash
+```bash
 cd catkin_ws/src
 git clone https://github.com/amslabtech/semantikitti2bag
-'''
+```
 
 #How to run it
 
-'''bash
+```bash
 cd catkin_ws/src/semantickitti2bag
 python __main__.py -p /place/your/kitti/dataset/ -s 00
-'''
+```
 
  * -s 00 specify sequence number you must write number as 0 to  00, 1 to 01, 11 to 11.
 
