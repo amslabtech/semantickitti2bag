@@ -17,12 +17,12 @@ Data must be organized in following format.
 
 '''bash
 /kitti/dataset/
-          └── sequences/
-                  ├── 00/
-                  │   │   
-                  │   ├── image_0/
-                  │   │     ├ 000000.png
-                  │   │     └ 000001.png
+	└── sequences/
+		├── 00/
+		│   │   
+		│   ├── image_0/
+		│   │     ├ 000000.png
+		│   │     └ 000001.png
                   │   ├── image_1/
                   │   ├── image_2/
                   │   ├── image_3/
