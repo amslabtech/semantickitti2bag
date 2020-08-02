@@ -15,38 +15,8 @@ This repository is based on [tomas789's](https://github.com/tomas789) [kitti2bag
 
 Data must be organized in following format.
 
-'''bash
-/kitti/dataset/
-	└── sequences/
-		├── 00/
-		│   │   
-		│   ├── image_0/
-		│   │     ├ 000000.png
-		│   │     └ 000001.png
-                  │   ├── image_1/
-                  │   ├── image_2/
-                  │   ├── image_3/
-                  │   ├── labels/
-                  │   │     ├ 000000.label
-                  │   │     └ 000001.label
-                  |   ├──poses.txt 
-                  |   ├──calib.txt <- From directory of "data_odometry_calib"
-                  |   ├──times.txt
-                  |   ├──00.txt  <- Ground truth 
-                  |   |   
-                  |   |   
-                  |   | 
-                  │   └── velodyne/
-                  │         ├ 000000.bin
-                  │         └ 000001.bin
-                  ├── 01/
-                  ├── 02/
-                  .
-                  .
-                  .
-                  └── 21/
+![direct_tree](https://user-images.githubusercontent.com/60866340/89120963-a9426c00-d4f5-11ea-8cb7-a4e2aa83e8cd.png)
 
-'''
 
 SemanticKITTI dataset has voxel data, but this repository doesn't handle.
 
