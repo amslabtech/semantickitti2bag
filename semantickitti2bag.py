@@ -2,7 +2,7 @@ import sys
 sys.dont_write_bytecode = True
 
 import utils #import utils.py
-
+from numpy.linalg import inv
 import tf
 import tf2_ros
 import os
@@ -87,7 +87,7 @@ class SemanticKitti_Raw:
                 #print(type(number))
                 self.timestamps.append(number)
 
-def inv(transform):
+def inv_t(transform):
 
     R = transform[0:3, 0:3]
     t = transform[0:3, 3]
@@ -141,7 +141,7 @@ def save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic):
                  PointField('rgb', 16, PointField.UINT32, 1)]
 
         pcl_msg = pcl2.create_cloud(header, fields, scan)
-        bag.write(velo_topic + '/pointcloud', pcl_msg, t=pcl_msg.header.stamp)
+        bag.write(velo_topic, pcl_msg, t=pcl_msg.header.stamp)
 
 def save_velo_data(bag, kitti, velo_frame_id, velo_topic):
     print("Exporting Velodyne data")
@@ -172,56 +172,50 @@ def save_velo_data(bag, kitti, velo_frame_id, velo_topic):
                  PointField('i', 12, PointField.FLOAT32, 1)]
 
         pcl_msg = pcl2.create_cloud(header, fields, velo_scan)
-        bag.write(velo_topic + '/pointcloud', pcl_msg, t=pcl_msg.header.stamp)
+        bag.write(velo_topic, pcl_msg, t=pcl_msg.header.stamp)
 
 def read_calib_file(filename):
     """ read calibration file 
 
         returns -> dict calibration matrices as 4*4 numpy arrays
     """
-    calib = []
-
-    calib1 = np.eye(4,4)
+    calib = {}
+    """calib1 = np.eye(4,4)
     calib1[0:3, 3] = [0.27, 0.0, -0.08]
-    #print(calib1)
+    print(calib1)
     calib.append(calib1)
 
     calib2 = np.eye(4,4)
     calib2[0:3, 3] = [0.27, -0.51, -0.08]
-    #print(calib2)
+    print(calib2)
     calib.append(calib2)
 
     calib3 = np.eye(4,4)
     calib3[0:3, 3] = [0.27, 0.06, -0.08]
-    #print(calib3)
+    print(calib3)
     calib.append(calib3)
 
     calib4 = np.eye(4,4)
     calib4[0:3, 3] = [0.27, -0.45, -0.08]
-    #print(calib4)
-    calib.append(calib4)
+    print(calib4)
+    calib.append(calib4)"""
+    calib_file = open(filename)
 
+    key_num = 0
 
+    for line in calib_file:
+        key, content = line.strip().split(":")
+        values = [float(v) for v in content.strip().split()]
+        pose = np.zeros((4,4))
+        
+        pose[0, 0:4] = values[0:4]
+        pose[1, 0:4] = values[4:8]
+        pose[2, 0:4] = values[8:12]
+        pose[3, 3] = 1.0
 
-    #calib_file = open(filename)
+        calib[key] = pose
 
-    #key_num = 0
-
-#    for line in calib_file:
-#        key, content = line.strip().split(":")
-#        values = [float(v) for v in content.strip().split()]
-#
-#        pose = np.zeros((4,4))
-#
-#        pose[0, 0:4] = values[0:4]
-#        pose[1, 0:4] = values[4:8]
-#        pose[2, 0:4] = values[8:12]
-#       pose[3, 3] = 1.0
-#
-#        calib.append(pose)
-#       key_num += 1
-#
-#    calib_file.close()
+    calib_file.close()
     
     #print(calib)
     return calib
@@ -231,8 +225,8 @@ def read_poses_file(filename, calibration):
 
     poses = []
 
-    #Tr = calibration[0]
-    #Tr_inv = inv(Tr)
+    Tr = calibration["Tr"]
+    Tr_inv = inv(Tr)
 
     for line in pose_file:
         values = [float(v) for v in line.strip().split()]
@@ -243,8 +237,8 @@ def read_poses_file(filename, calibration):
         pose[2, 0:4] = values[8:12]
         pose[3, 3] = 1.0
 
-        #poses.append(np.matmul(Tr_inv, np.matmul(pose, Tr)))
-        poses.append(pose)
+        poses.append(np.matmul(Tr_inv, np.matmul(pose, Tr)))
+        #poses.append(pose)
 
     pose_file.close()
     return poses
@@ -336,7 +330,7 @@ def save_camera_data(bag, kitti, calibration, bridge, camera, camera_frame_id, t
 
     calib = CameraInfo()
     calib.header.frame_id = camera_frame_id
-    P = calibration[camera]
+    #P = calibration["{}".format(camera)]
     #calib.P
 
 
@@ -410,7 +404,7 @@ def run_semantickitti2bag():
     
     try:
         velo_frame_id = 'vehicle'
-        velo_topic = '/semantickitti/velo'
+        velo_topic = '/velodyne_points'
         vehicle_frame_id = 'vehicle'
         vehicle_topic = '/semantickitti/odometry'
         ground_truth_topic = '/semantickitti/ground_truth'
@@ -418,28 +412,48 @@ def run_semantickitti2bag():
         T_base_link_to_velo = np.eye(4, 4)
 
         calibration = read_calib_file(os.path.join(kitti.data_path, 'calib.txt'))
+        
+        calib0 = np.eye(4,4)
+        calib0[0:3, 3] = [0.27, 0.0, -0.08]
+        #print(calib0)
+        
+        calib1 = np.eye(4,4)
+        calib1[0:3, 3] = [0.27, -0.51, -0.08]
+        #print(calib1)
+        
+        calib2 = np.eye(4,4)
+        calib2[0:3, 3] = [0.27, 0.06, -0.08]
+        #print(calib2)
+        
+        calib3 = np.eye(4,4)
+        calib3[0:3, 3] = [0.27, -0.45, -0.08]
+        #print(calib3)
+        
         #tf-static
         transforms = [
             ('base_link'  , velo_frame_id, T_base_link_to_velo),
-            ('base_link', cameras[0][1], calibration[0]),
-            ('base_link', cameras[1][1], calibration[1]),
-            ('base_link', cameras[2][1], calibration[2]),
-            ('base_link', cameras[3][1], calibration[3])
+            ('base_link', cameras[0][1], calib0),
+            ('base_link', cameras[1][1], calib1),
+            ('base_link', cameras[2][1], calib2),
+            ('base_link', cameras[3][1], calib3)
         ]
             
         save_static_transforms(bag, transforms, kitti)
 
         poses = read_poses_file(os.path.join(kitti.data_path,'poses.txt'), calibration)
+        #save_posture(bag, kitti, poses, 
 
         ground_truth_file_name = "{}.txt".format(args.sequence_number)
         ground_truth = read_poses_file(os.path.join(kitti.data_path, ground_truth_file_name), calibration)
 
         save_dynamic_transforms(bag, kitti, poses, initial_time=None)
-        #save_dynamic_transforms(bag, kitti, ground_truth, initial_time=None)
+        save_dynamic_transforms(bag, kitti, ground_truth, initial_time=None)
 
         if scanlabel_bool == 1:
+            #print('a')
             save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic)
         elif scanlabel_bool == 0:
+            #print('b')
             save_velo_data(bag, kitti, velo_frame_id, velo_topic)
 
         for camera in cameras:
