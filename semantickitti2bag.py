@@ -539,15 +539,15 @@ def run_semantickitti2bag():
 
         
         if scanlabel_bool == 1:
-            print('a')
-            #save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic)
+            #print('a')
+            save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic)
         elif scanlabel_bool == 0:
-            print('b')
-            #save_velo_data(bag, kitti, velo_frame_id, velo_topic)
+            #print('b')
+            save_velo_data(bag, kitti, velo_frame_id, velo_topic)
 
         for camera in cameras:
-            print('c')
-            #save_camera_data(bag, kitti, calibration, bridge, camera=camera[0], camera_frame_id=camera[1], topic=camera[2], initial_time=None)
+            #print('c')
+            save_camera_data(bag, kitti, calibration, bridge, camera=camera[0], camera_frame_id=camera[1], topic=camera[2], initial_time=None)
 
 
     finally:
