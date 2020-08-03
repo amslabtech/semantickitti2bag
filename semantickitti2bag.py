@@ -1,6 +1,6 @@
 import sys
 sys.dont_write_bytecode = True
-
+import math
 import utils #import utils.py
 from numpy.linalg import inv
 import tf
@@ -16,8 +16,8 @@ from datetime import datetime
 from std_msgs.msg import Header
 from sensor_msgs.msg import CameraInfo, Imu, PointField, NavSatFix
 import sensor_msgs.point_cloud2 as pcl2
-from geometry_msgs.msg import TransformStamped, TwistStamped, Transform
-#from nav_mags.msg import Odometry
+from geometry_msgs.msg import TransformStamped, TwistStamped, Transform, PoseStamped
+from nav_msgs.msg import Odometry
 import numpy as np
 import argparse
 import glob
@@ -281,7 +281,7 @@ def save_static_transforms(bag, transforms, kitti):
             tfm.transforms[i].header.stamp = time
         bag.write('/tf_static', tfm, t=time)
 
-def save_dynamic_transforms(bag, kitti, poses, initial_time):
+def save_dynamic_transforms(bag, kitti, poses, master_frame_id, slave_frame_id,initial_time):
     print("Exporting time dependent transformations")
 
     datatimes = kitti.timestamps
@@ -297,8 +297,8 @@ def save_dynamic_transforms(bag, kitti, poses, initial_time):
         tf_dy_transform.header.stamp = rospy.Time.from_sec(float(dt))
         #print(tf_dy_transform.header.stamp)
 
-        tf_dy_transform.header.frame_id = 'map'
-        tf_dy_transform.child_frame_id = 'base_link'
+        tf_dy_transform.header.frame_id = master_frame_id
+        tf_dy_transform.child_frame_id = slave_frame_id
 
         t = pose[0:3, 3]
         q = tf.transformations.quaternion_from_matrix(pose)
@@ -358,6 +358,82 @@ def save_camera_data(bag, kitti, calibration, bridge, camera, camera_frame_id, t
         #bag.write(topic + '/camera_info', calib, t=calib.header.stamp)
 
 
+def save_pose_msg(bag, kitti, poses, master_frame_id, slave_frame_id, topic, initial_time=None):
+    print("Exporting pose msg")
+
+    datatimes = kitti.timestamps
+
+    iterable = zip(datatimes, poses)
+    bar = progressbar.ProgressBar()
+
+    p_t1 = PoseStamped()
+    dt_1 = 0.00
+    counter = 0
+
+    for dt, pose in bar(iterable):
+        p = PoseStamped()
+        p.header.frame_id = master_frame_id
+        p.header.stamp = rospy.Time.from_sec(float(dt))
+
+        t = pose[0:3, 3]
+        q = tf.transformations.quaternion_from_matrix(pose)
+
+        p.pose.position.x = t[0]
+        p.pose.position.y = t[1]
+        p.pose.position.z = t[2]
+
+        q_n = q / np.linalg.norm(q)
+
+        p.pose.orientation.x = q_n[0]
+        p.pose.orientation.y = q_n[1]
+        p.pose.orientation.z = q_n[2]
+        p.pose.orientation.w = q_n[3]
+
+        if(counter == 0):
+            p_t1 = p
+
+        bag.write(topic, p, t=p.header.stamp)
+
+        delta_t = (dt - dt_1)
+        if(counter == 0):
+            delta_t = 0.00000001
+        
+        vx = (p.pose.position.x - p_t1.pose.position.x )/delta_t
+        vy = (p.pose.position.y - p_t1.pose.position.y )/delta_t
+        vz = (p.pose.position.z - p_t1.pose.position.z )/delta_t
+
+        vqx = (p.pose.orientation.x - p_t1.pose.orientation.x)
+        vqy = (p.pose.orientation.y - p_t1.pose.orientation.y)
+        vqz = (p.pose.orientation.z - p_t1.pose.orientation.z)
+        vqw = (p.pose.orientation.w - p_t1.pose.orientation.w)
+  
+        v_roll = math.atan2( 2*(vqw*vqx + vqy*vqz), 1-2*(vqx**2 + vqy**2)  )/delta_t
+        v_pitch = math.asin( 2*(vqw*vqy - vqz*vqx) )/delta_t
+        v_yaw = math.atan2( 2*(vqw*vqz + vqx*vqy) , 1-2*(vqy**2 + vqz**2)  )/delta_t
+
+        odom = Odometry()
+        odom.header.stamp = p.header.stamp
+        odom.header.frame_id = master_frame_id
+        odom.child_frame_id = slave_frame_id
+
+        odom.pose.pose.position = p.pose.position
+        odom.pose.pose.orientation = p.pose.orientation
+        
+        odom.twist.twist.linear.x = vx
+        odom.twist.twist.linear.y = vy
+        odom.twist.twist.linear.z = vz
+        
+        
+        odom.twist.twist.angular.x = v_roll
+        odom.twist.twist.angular.y = v_pitch
+        odom.twist.twist.angular.z = v_yaw
+
+        bag.write(topic + '_odom', odom, t=odom.header.stamp)
+        
+        counter += 1
+        p_t1 = p
+        dt_1 = dt
+
 def run_semantickitti2bag():
 
     parser = argparse.ArgumentParser(description='Convert SemanticKITTI dataset to rosbag file')
@@ -403,11 +479,18 @@ def run_semantickitti2bag():
         sys.exit(1)
     
     try:
-        velo_frame_id = 'vehicle'
-        velo_topic = '/velodyne_points'
+        world_frame_id = 'map'
+
         vehicle_frame_id = 'vehicle'
-        vehicle_topic = '/semantickitti/odometry'
-        ground_truth_topic = '/semantickitti/ground_truth'
+        vehicle_topic = '/vehicle'
+
+        ground_truth_frame_id = 'ground_truth'
+        ground_truth_topic = '/ground_truth'
+
+        velo_frame_id = 'velodyne'
+        velo_topic = '/velodyne_points'
+
+        vehicle_frame_id = vehicle_frame_id
 
         T_base_link_to_velo = np.eye(4, 4)
 
@@ -430,34 +513,41 @@ def run_semantickitti2bag():
         #print(calib3)
         
         #tf-static
+
         transforms = [
-            ('base_link'  , velo_frame_id, T_base_link_to_velo),
-            ('base_link', cameras[0][1], calib0),
-            ('base_link', cameras[1][1], calib1),
-            ('base_link', cameras[2][1], calib2),
-            ('base_link', cameras[3][1], calib3)
+            (vehicle_frame_id, velo_frame_id, T_base_link_to_velo),
+            (vehicle_frame_id, cameras[0][1], calib0),
+            (vehicle_frame_id, cameras[1][1], calib1),
+            (vehicle_frame_id, cameras[2][1], calib2),
+            (vehicle_frame_id, cameras[3][1], calib3)
         ]
-            
+
+
         save_static_transforms(bag, transforms, kitti)
 
+        #These poses are represented in world coordinate
         poses = read_poses_file(os.path.join(kitti.data_path,'poses.txt'), calibration)
-        #save_posture(bag, kitti, poses, 
-
+        
         ground_truth_file_name = "{}.txt".format(args.sequence_number)
         ground_truth = read_poses_file(os.path.join(kitti.data_path, ground_truth_file_name), calibration)
 
-        save_dynamic_transforms(bag, kitti, poses, initial_time=None)
-        save_dynamic_transforms(bag, kitti, ground_truth, initial_time=None)
+        save_dynamic_transforms(bag, kitti, poses, world_frame_id, vehicle_frame_id, initial_time=None)
+        save_dynamic_transforms(bag, kitti, ground_truth, world_frame_id, ground_truth_frame_id, initial_time=None)
 
+        save_pose_msg(bag, kitti, poses, world_frame_id, vehicle_frame_id, vehicle_topic, initial_time=None)
+        save_pose_msg(bag, kitti, ground_truth, world_frame_id, ground_truth_frame_id, ground_truth_topic, initial_time=None)
+
+        
         if scanlabel_bool == 1:
-            #print('a')
-            save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic)
+            print('a')
+            #save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic)
         elif scanlabel_bool == 0:
-            #print('b')
-            save_velo_data(bag, kitti, velo_frame_id, velo_topic)
+            print('b')
+            #save_velo_data(bag, kitti, velo_frame_id, velo_topic)
 
         for camera in cameras:
-            save_camera_data(bag, kitti, calibration, bridge, camera=camera[0], camera_frame_id=camera[1], topic=camera[2], initial_time=None)
+            print('c')
+            #save_camera_data(bag, kitti, calibration, bridge, camera=camera[0], camera_frame_id=camera[1], topic=camera[2], initial_time=None)
 
 
     finally:
