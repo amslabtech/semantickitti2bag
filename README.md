@@ -33,7 +33,7 @@ cd catkin_ws/src
 git clone https://github.com/amslabtech/semantikitti2bag
 ```
 
-#How to run it
+# How to run it
 
 ```bash
 cd catkin_ws/src/semantickitti2bag
