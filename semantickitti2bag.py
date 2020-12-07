@@ -71,6 +71,8 @@ class SemanticKitti_Raw:
             for line in f.readlines():
                 #number = datetime.fromtimestamp(float(line))
                 number = float(line)
+                if number == 0.0:
+                    number = 0.001
                 #sign = 1.0
                 
                 #if line[9]=='+':
@@ -171,7 +173,7 @@ def save_velo_data(bag, kitti, velo_frame_id, velo_topic):
                  PointField('z',  8, PointField.FLOAT32, 1),
                  PointField('i', 12, PointField.FLOAT32, 1)]
 
-        pcl_msg = pcl2.create_cloud(header, fields, velo_scan)
+        pcl_msg = pcl2.create_cloud(header, fields, veloscan)
         bag.write(velo_topic, pcl_msg, t=pcl_msg.header.stamp)
 
 def read_calib_file(filename):
@@ -428,7 +430,7 @@ def save_pose_msg(bag, kitti, poses, master_frame_id, slave_frame_id, topic, ini
         odom.twist.twist.angular.y = v_pitch
         odom.twist.twist.angular.z = v_yaw
 
-        bag.write(topic + '_odom', odom, t=odom.header.stamp)
+        bag.write('/odom_pose', odom, t=odom.header.stamp)
         
         counter += 1
         p_t1 = p
@@ -535,12 +537,14 @@ def run_semantickitti2bag():
         save_dynamic_transforms(bag, kitti, ground_truth, world_frame_id, ground_truth_frame_id, initial_time=None)
 
         save_pose_msg(bag, kitti, poses, world_frame_id, vehicle_frame_id, vehicle_topic, initial_time=None)
-        save_pose_msg(bag, kitti, ground_truth, world_frame_id, ground_truth_frame_id, ground_truth_topic, initial_time=None)
+        #save_pose_msg(bag, kitti, ground_truth, world_frame_id, ground_truth_frame_id, ground_truth_topic, initial_time=None)
 
         
         if scanlabel_bool == 1:
             #print('a')
             save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic)
+            #save_velo_data(bag, kitti, velo_frame_id, velo_topic)
+
         elif scanlabel_bool == 0:
             #print('b')
             save_velo_data(bag, kitti, velo_frame_id, velo_topic)
