@@ -72,7 +72,7 @@ class SemanticKitti_Raw:
                 #number = datetime.fromtimestamp(float(line))
                 number = float(line)
                 if number == 0.0:
-                    number = 0.001
+                    number = 0.0001
                 #sign = 1.0
                 
                 #if line[9]=='+':
