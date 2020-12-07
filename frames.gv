@@ -1,0 +1,20 @@
+digraph G {
+"vehicle" -> "velodyne"[label="Broadcaster: /play_1596965029530222742\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1596965119.065 sec old)\nBuffer length: 0.000 sec\n"];
+"map" -> "vehicle"[label="Broadcaster: /play_1596965029530222742\nAverage rate: 9.852 Hz\nMost recent transform: 89.160 ( 1596965029.906 sec old)\nBuffer length: 4.872 sec\n"];
+"vehicle" -> "camera_gray_left"[label="Broadcaster: /play_1596965029530222742\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1596965119.065 sec old)\nBuffer length: 0.000 sec\n"];
+"vehicle" -> "camera_gray_right"[label="Broadcaster: /play_1596965029530222742\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1596965119.065 sec old)\nBuffer length: 0.000 sec\n"];
+"vehicle" -> "camera_color_left"[label="Broadcaster: /play_1596965029530222742\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1596965119.065 sec old)\nBuffer length: 0.000 sec\n"];
+"vehicle" -> "camera_color_right"[label="Broadcaster: /play_1596965029530222742\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1596965119.065 sec old)\nBuffer length: 0.000 sec\n"];
+"map" -> "ground_truth"[label="Broadcaster: /play_1596965029530222742\nAverage rate: 9.852 Hz\nMost recent transform: 89.160 ( 1596965029.906 sec old)\nBuffer length: 4.872 sec\n"];
+"camera_init" -> "camera"[label="Broadcaster: /transformMaintenance\nAverage rate: 2.297 Hz\nMost recent transform: 87.812 ( 1596965031.253 sec old)\nBuffer length: 4.354 sec\n"];
+"camera_init" -> "laser_odom"[label="Broadcaster: /laserOdometry\nAverage rate: 2.297 Hz\nMost recent transform: 87.812 ( 1596965031.253 sec old)\nBuffer length: 4.354 sec\n"];
+"camera_init" -> "aft_mapped"[label="Broadcaster: /laserMapping\nAverage rate: 10000.000 Hz\nMost recent transform: 82.007 ( 1596965037.059 sec old)\nBuffer length: 0.000 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1596965119.065"[ shape=plaintext ] ;
+ }->"map";
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1596965119.065"[ shape=plaintext ] ;
+ }->"camera_init";
+}
