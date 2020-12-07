@@ -45,7 +45,6 @@ python __main__.py -p /place/your/kitti/dataset/ -s 00
 # Author
 
  * [Hibiki1020](https://github.com/Hibiki1020)
- * Meiji university
 
 # License
 This repository is under MIT License.
