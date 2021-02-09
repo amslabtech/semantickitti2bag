@@ -41,14 +41,14 @@ python __main__.py -p /home/****/your_dataset_directory/kitti/dataset/ -s 00
 
  * -s 00 specify sequence number you must write number as 0 to  00, 1 to 01, 11 to 11.
 
-#Publishing Topic
+# Publishing Topic
 * Camera data      -> sensor_msgs/Image
 * /odom_pose       -> nav_msgs/Odometry (Ground Truth, Please read Note)
 * /velodyne_points -> sensor_msgs/PointCloud2
 * /vehicle         -> nav_msgs/Pose (Ground Truth)
 ![rostopic](https://user-images.githubusercontent.com/60866340/107331157-d3ed2d00-6af5-11eb-968d-faffdebc06fa.png)
 
-#TF-Tree
+# TF-Tree
 
 * Map          -> World Coordinate
 * ground_truth -> **This tree is not Ground Truth**. Ignore it.
@@ -56,7 +56,7 @@ python __main__.py -p /home/****/your_dataset_directory/kitti/dataset/ -s 00
 * velodyne     -> This coordinate is same as Vehicle coordinate, This is divided for programming convenience.
 ![Screenshot from 2021-02-02 17-45-40](https://user-images.githubusercontent.com/60866340/107332669-cd5fb500-6af7-11eb-9a75-8b3919c5b53e.png)
 
-#Note
+# Note
 
 * This program generates odometry data, but actually odometry data is ***GROUND TRUTH DATA*** and its velocity's coordinate is ***World(map) coordinate***, bacause Semantic kitti dataset only contain GT poses. Velocity data is generated from transition from t-1 to t. If you have good idea to solve this problem, please post on issue without hesitation.
 
