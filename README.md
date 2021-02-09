@@ -37,10 +37,16 @@ git clone https://github.com/amslabtech/semantikitti2bag
 
 ```bash
 cd catkin_ws/src/semantickitti2bag
-python __main__.py -p /place/your/kitti/dataset/ -s 00
+python __main__.py -p /home/****/your_dataset_directory/kitti/dataset/ -s 00
 ```
 
  * -s 00 specify sequence number you must write number as 0 to  00, 1 to 01, 11 to 11.
+
+#Note
+
+* This program generates odometry data, but actually odometry data is ***GROUND TRUTH DATA*** and its velocity's coordinate is ***World(map) coordinate***, bacause Semantic kitti dataset only contain GT poses. Velocity data is generated from transition from t-1 to t. If you have good idea to solve this problem, please post on issue without hesitation.
+
+* This program was made by python2.7 on ROS melodic. I didn't tested on ROS noetic or Python3 environment. So if you run this on these environment, please notify how was that on issue :)
 
 # Author
 
