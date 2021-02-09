@@ -29,14 +29,13 @@ SemanticKITTI dataset has voxel data, but this repository doesn't handle.
 
 # How to install it?
 ```bash
-cd catkin_ws/src
 git clone https://github.com/amslabtech/semantikitti2bag
 ```
 
 # How to run it
 
 ```bash
-cd catkin_ws/src/semantickitti2bag
+cd PLACE/OF/semantickitti2bag
 python __main__.py -p /home/****/your_dataset_directory/kitti/dataset/ -s 00
 ```
 
