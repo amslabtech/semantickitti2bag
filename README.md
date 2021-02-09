@@ -54,7 +54,7 @@ python __main__.py -p /home/****/your_dataset_directory/kitti/dataset/ -s 00
 * ground_truth -> **This tree is not Ground Truth**. Ignore it.
 * Vehicle      -> Vehicle frame(actually ground truth)
 * velodyne     -> This coordinate is same as Vehicle coordinate, This is divided for programming convenience.
-![Screenshot from 2021-02-02 17-45-40](https://user-images.githubusercontent.com/60866340/107332669-cd5fb500-6af7-11eb-9a75-8b3919c5b53e.png)
+![Screenshot from 2021-02-09 16-56-30](https://user-images.githubusercontent.com/60866340/107333453-d8671500-6af8-11eb-8ea7-77b5dcd0cedb.png)
 
 # Note
 
