@@ -5,7 +5,7 @@
  * Link to original [KITTI Odometry dataset](http://www.cvlibs.net/datasets/kitti/eval_odometry.php)
  * Link to [SemanticKITTI dataset](http://semantic-kitti.org/)
 
-You can convert these dataset easy way :)
+You can convert these dataset easy way :D
 
 ![rviz_2020_08_02](https://user-images.githubusercontent.com/60866340/89119958-13a2de80-d4ed-11ea-8ffc-29a5c5f5f420.png)
 
