@@ -129,7 +129,7 @@ def save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic):
         scan = []
 
         for t in range(len(labeldata.rgb_id)):
-            point = [veloscan[t][0], veloscan[t][1], veloscan[t][2], veloscan[t][3], labeldata.rgb_id[t]]
+            point = [veloscan[t][0], veloscan[t][1], veloscan[t][2], veloscan[t][3], labeldata.rgb_id[t], labeldata.semantic_id[t]]
             scan.append(point)
 
         header = Header()
@@ -139,8 +139,9 @@ def save_velo_data_with_label(bag, kitti, velo_frame_id, velo_topic):
         fields =[PointField('x',  0, PointField.FLOAT32, 1),
                  PointField('y',  4, PointField.FLOAT32, 1),
                  PointField('z',  8, PointField.FLOAT32, 1),
-                 PointField('i', 12, PointField.FLOAT32, 1),
-                 PointField('rgb', 16, PointField.UINT32, 1)]
+                 PointField('intensity', 12, PointField.FLOAT32, 1),
+                 PointField('rgb', 16, PointField.UINT32, 1),
+                 PointField('label', 20, PointField.UINT16, 1)]
 
         pcl_msg = pcl2.create_cloud(header, fields, scan)
         bag.write(velo_topic, pcl_msg, t=pcl_msg.header.stamp)
@@ -171,7 +172,7 @@ def save_velo_data(bag, kitti, velo_frame_id, velo_topic):
         fields =[PointField('x',  0, PointField.FLOAT32, 1),
                  PointField('y',  4, PointField.FLOAT32, 1),
                  PointField('z',  8, PointField.FLOAT32, 1),
-                 PointField('i', 12, PointField.FLOAT32, 1)]
+                 PointField('intensity', 12, PointField.FLOAT32, 1)]
 
         pcl_msg = pcl2.create_cloud(header, fields, veloscan)
         bag.write(velo_topic, pcl_msg, t=pcl_msg.header.stamp)
