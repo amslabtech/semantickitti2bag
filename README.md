@@ -67,7 +67,7 @@ python __main__.py -p /home/****/your_dataset_directory/kitti/dataset/ -s 00
  * [Hibiki1020](https://github.com/Hibiki1020)
 
 # Update
-*(2021-6-30)In addition, we added a "label" class to the Point cloud field to represent the semantic class from here as well. Thanks for your help in fixing the code.
+* (2021-6-30) In addition, we added a "label" class to the Point cloud field to represent the semantic class from here as well. Thanks for your help in fixing the code.
 
 # License
 This repository is under MIT License.
